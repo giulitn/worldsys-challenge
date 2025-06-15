@@ -5,10 +5,12 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
     "check-table": "ts-node src/checkTable.ts",
-    "process-file": "ts-node src/run.ts"
+    "process-file": "ts-node src/run.ts",
+    "generate": "ts-node src/generateFile.ts",
+    "check": "ts-node src/checkTable.ts",
+    "start": "ts-node src/run.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,11 +24,9 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.8.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "mssql": "^11.0.1"
   }
 }
-
-
-
