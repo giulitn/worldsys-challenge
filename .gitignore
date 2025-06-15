@@ -2,3 +2,5 @@ node_modules
 dist
 .env
 challenge/input/CLIENTES_IN_0425.dat
+logs/
+
