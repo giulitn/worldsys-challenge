@@ -5,6 +5,11 @@ import path from "path";
 import readline from "readline";
 import { connectToDb } from "../db/sqlServer";
 import { logger } from "../utils/logger";
+import {
+  buildInsertRequest,
+  isValidFullName,
+  parseLine,
+} from "../utils/clientUtils";
 
 const inputPath = path.resolve("./challenge/input/CLIENTES_IN_0425.dat");
 
@@ -27,9 +32,9 @@ export const processFile = async () => {
 
   for await (const line of rl) {
     total++;
-    const fields = line.split("|");
+    const fields = parseLine(line);
 
-    if (fields.length !== 7 || fields.some((f) => !f.trim())) {
+    if (!fields) {
       invalid++;
       continue;
     }
@@ -43,21 +48,22 @@ export const processFile = async () => {
       esPep,
       esSujetoObligado,
     ] = fields;
+    const fullName = `${nombre} ${apellido}`;
 
-    const nombreCompleto = `${nombre} ${apellido}`;
-    const esPepInt = esPep.trim().toLowerCase() === "true" ? 1 : 0;
-    const esSujetoObligadoInt =
-      esSujetoObligado.trim().toLowerCase() === "true" ? 1 : 0;
+    if (!isValidFullName(fullName)) {
+      invalid++;
+      continue;
+    }
 
     try {
-      const request = connection.request();
-      request
-        .input("nombreCompleto", nombreCompleto.substring(0, 100))
-        .input("dni", dni)
-        .input("estado", estado)
-        .input("fechaIngreso", fechaIngreso)
-        .input("esPep", esPepInt)
-        .input("esSujetoObligado", esSujetoObligadoInt);
+      const request = buildInsertRequest(connection, {
+        fullName,
+        dni,
+        estado,
+        fechaIngreso,
+        esPep,
+        esSujetoObligado,
+      });
 
       await request.query(`
         INSERT INTO clientes (NombreCompleto, DNI, Estado, FechaIngreso, EsPEP, EsSujetoObligado, FechaCreacion)
@@ -72,8 +78,9 @@ export const processFile = async () => {
     if (total % 10000 === 0) {
       const used = process.memoryUsage().heapUsed / 1024 / 1024;
       logger.log(
-        `🔍 Procesadas ${total} líneas...
-🧠 Checkpoint - ${valid} válidas 💾 Memoria actual: ${used.toFixed(2)} MiB`
+        `🔍 Procesadas ${total} líneas...\n🧠 Checkpoint - ${valid} válidas 💾 Memoria actual: ${used.toFixed(
+          2
+        )} MiB`
       );
     }
   }
