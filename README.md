@@ -58,10 +58,12 @@ npm run check
 
 Crear un archivo .env en la raíz del proyecto con la configuración de conexión a la base de datos:
 
+```bash
 DB_USER=sa
 DB_PASSWORD=yourStrong(!)Password
 DB_SERVER=localhost
 DB_NAME=clientes
+```
 
 ### 5. Ejecutar el procesador de archivo
 
@@ -76,3 +78,61 @@ Se mostrará un resumen por consola con las estadísticas de procesamiento, uso 
 ### 6. 📘 Swagger
 
 Si bien la solución principal es un script para procesamiento batch, también se incluye el endpoint health documentado con Swagger. Esto facilita la futura ampliación del proyecto.
+
+### 6. 📌 📈 Ideas para escalar la solución a futuro
+
+#### 🧵 1. Paralelización por bloques
+
+Dividir el archivo en chunks y usar `worker_threads` o `child_process` para procesarlos en paralelo.
+
+#### 🗃️ 2.Inserción por lote
+
+Agrupar registros válidos y hacer `bulk insert` para reducir llamadas a la base de datos.
+
+#### ☁️ 3. Microservicio escalable
+
+- Subida del archivo a un bucket (ej. S3)
+
+- Múltiples pods paralelos en Kubernetes leyendo y procesando partes del archivo
+
+#### 📦 4. Optimización de base de datos
+
+- Uso de índices
+
+- Procedimientos almacenados
+
+- Transacciones por lote
+
+#### 📊 5. Monitoreo real
+
+Agregar:
+
+- Prometheus + Grafana
+
+- New Relic o Datadog
+
+- ELK stack para logs centralizados
+
+### ⚙️ 🧠 Escalado distribuido con Apache Kafka
+
+Para entornos con alto volumen de archivos o múltiples fuentes simultáneas, se puede escalar la solución usando Apache Kafka.
+
+### 🎯 ¿Por qué Kafka?
+
+- Desacopla lectura y escritura
+
+- Tolerancia a fallos
+
+- Escalado horizontal con múltiples consumidores
+
+- Procesamiento concurrente
+
+- Persistencia temporal de eventos
+
+- Integración con pipelines externos
+
+### Consideraciones
+
+- Mayor complejidad de infraestructura
+
+- Útil solo en escenarios de alto volumen o streaming
