@@ -1,5 +1,3 @@
-// src/services/fileProcessor.ts
-
 import fs from "fs";
 import path from "path";
 import readline from "readline";
@@ -21,76 +19,80 @@ export const processFile = async () => {
     return;
   }
 
-  const connection = await connectToDb();
-  const stream = fs.createReadStream(inputPath);
-  const rl = readline.createInterface({ input: stream });
+  const sqlConnection = await connectToDb();
+  const fileStream = fs.createReadStream(inputPath);
+  const lineReader = readline.createInterface({ input: fileStream });
 
-  let total = 0;
-  let valid = 0;
-  let invalid = 0;
-  const start = Date.now();
+  let totalLinesProcessed = 0;
+  let totalValidLines = 0;
+  let totalInvalidLines = 0;
+  const startTime = Date.now();
 
-  for await (const line of rl) {
-    total++;
-    const fields = parseLine(line);
+  for await (const rawLine of lineReader) {
+    totalLinesProcessed++;
+    const parsedFields = parseLine(rawLine);
 
-    if (!fields) {
-      invalid++;
+    if (!parsedFields) {
+      totalInvalidLines++;
       continue;
     }
 
     const [
-      nombre,
-      apellido,
+      firstName,
+      lastName,
       dni,
-      estado,
-      fechaIngreso,
-      esPep,
-      esSujetoObligado,
-    ] = fields;
-    const fullName = `${nombre} ${apellido}`;
+      status,
+      admissionDate,
+      isPep,
+      isSubjectToObligations,
+    ] = parsedFields;
+
+    const fullName = `${firstName} ${lastName}`;
 
     if (!isValidFullName(fullName)) {
-      invalid++;
+      totalInvalidLines++;
       continue;
     }
 
     try {
-      const request = buildInsertRequest(connection, {
+      const insertRequest = buildInsertRequest(sqlConnection, {
         fullName,
         dni,
-        estado,
-        fechaIngreso,
-        esPep,
-        esSujetoObligado,
+        estado: status,
+        fechaIngreso: admissionDate,
+        esPep: isPep,
+        esSujetoObligado: isSubjectToObligations,
       });
 
-      await request.query(`
+      await insertRequest.query(`
         INSERT INTO clientes (NombreCompleto, DNI, Estado, FechaIngreso, EsPEP, EsSujetoObligado, FechaCreacion)
         VALUES (@nombreCompleto, @dni, @estado, @fechaIngreso, @esPep, @esSujetoObligado, GETDATE())
       `);
 
-      valid++;
+      totalValidLines++;
     } catch {
-      invalid++;
+      totalInvalidLines++;
     }
 
-    if (total % 10000 === 0) {
-      const used = process.memoryUsage().heapUsed / 1024 / 1024;
+    if (totalLinesProcessed % 10000 === 0) {
+      const currentMemoryUsage = process.memoryUsage().heapUsed / 1024 / 1024;
       logger.log(
-        `🔍 Procesadas ${total} líneas...\n🧠 Checkpoint - ${valid} válidas 💾 Memoria actual: ${used.toFixed(
+        `🔍 Procesadas ${totalLinesProcessed} líneas...\n🧠 Checkpoint - ${totalValidLines} válidas 💾 Memoria actual: ${currentMemoryUsage.toFixed(
           2
         )} MiB`
       );
     }
   }
 
-  const duration = ((Date.now() - start) / 1000).toFixed(2);
+  const totalDurationSeconds = ((Date.now() - startTime) / 1000).toFixed(2);
   logger.log("\n✅ Procesamiento finalizado.");
-  logger.log(`📌 Total de líneas: ${total}`);
-  logger.log(`🚫 Ignoradas por error: ${invalid}`);
-  logger.log(`⏱️ Tiempo total: ${duration} segundos`);
+  logger.log(`📌 Total de líneas procesadas: ${totalLinesProcessed}`);
+  logger.log(`🚫 Total de líneas inválidas: ${totalInvalidLines}`);
+  logger.log(`📥 Total de líneas válidas: ${totalValidLines}`);
+  logger.log(
+    `⏱️ Tiempo total de procesamiento: ${totalDurationSeconds} segundos`
+  );
 
-  const used = process.memoryUsage().heapUsed / 1024 / 1024;
-  logger.log(`💾 Memoria utilizada: ${used.toFixed(2)} MiB`);
+  const finalMemoryUsage = process.memoryUsage().heapUsed / 1024 / 1024;
+  logger.log(`💾 Memoria utilizada: ${finalMemoryUsage.toFixed(2)} MiB`);
 };

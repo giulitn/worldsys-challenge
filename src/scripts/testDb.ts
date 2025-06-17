@@ -1,4 +1,4 @@
-import { connectToDb } from "./db/sqlServer";
+import { connectToDb } from "../db/sqlServer";
 
 /**
  * Inserts a single valid test client into the `Clientes` table.
